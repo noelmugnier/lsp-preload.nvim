@@ -75,9 +75,38 @@ local function start_via_trigger_file(spec, cwd)
 	vim.bo[bufnr].bufhidden = "hide"
 end
 
+---Expand ~ and resolve to an absolute path.
+local function normalize(path)
+	return vim.fn.fnamemodify(vim.fn.expand(path), ":p"):gsub("/$", "")
+end
+
+---Return true if `cwd` is inside any of the configured allow-list paths.
+---No paths configured = no restriction (backward compat).
+local function cwd_allowed(cwd, allowed)
+	if not allowed or #allowed == 0 then
+		return true
+	end
+	local abs_cwd = normalize(cwd) .. "/"
+	for _, base in ipairs(allowed) do
+		local abs_base = normalize(base) .. "/"
+		if abs_cwd:sub(1, #abs_base) == abs_base then
+			return true
+		end
+	end
+	return false
+end
+
 ---@param cwd? string override for auto-detect (tests)
 function M.preload(cwd)
 	cwd = cwd or vim.fn.getcwd()
+	-- Never scan filesystem-root-like paths: the trigger_file strategy
+	-- calls glob("/**/*.cs") which would walk the entire disk.
+	if cwd == "/" or cwd == vim.env.HOME or cwd == "/Users" then
+		return
+	end
+	if not cwd_allowed(cwd, M._opts.paths) then
+		return
+	end
 	for _, lang in ipairs(detect.detect(cwd)) do
 		local spec = langs.specs[lang]
 		if spec then
@@ -90,8 +119,12 @@ function M.preload(cwd)
 	end
 end
 
+M._opts = { paths = {} }
+
+---@class lsp_preload.Opts
+---@field paths? string[] only preload when cwd is under one of these (supports ~)
 function M.setup(opts)
-	opts = opts or {}
+	M._opts = vim.tbl_extend("force", M._opts, opts or {})
 	local function run()
 		if vim.g.lsp_preload_enabled == false then
 			return

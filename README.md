@@ -26,7 +26,11 @@ excluded — they belong on the buffer they service, not on a workspace.
   dir = "~/Projects/Perso/lsp-preload.nvim",
   dev = true,
   event = "VeryLazy",
-  config = true,
+  opts = {
+    -- Restrict preload to these workspace roots (recursively). When empty
+    -- (default), every cwd is eligible.
+    paths = { "~/projects", "~/Projects" },
+  },
 }
 ```
 
