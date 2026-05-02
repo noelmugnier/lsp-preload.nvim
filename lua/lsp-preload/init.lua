@@ -81,10 +81,10 @@ local function normalize(path)
 end
 
 ---Return true if `cwd` is inside any of the configured allow-list paths.
----No paths configured = no restriction (backward compat).
+---No paths configured = nothing is allowed (opt-in by design).
 local function cwd_allowed(cwd, allowed)
 	if not allowed or #allowed == 0 then
-		return true
+		return false
 	end
 	local abs_cwd = normalize(cwd) .. "/"
 	for _, base in ipairs(allowed) do
